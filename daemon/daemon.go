@@ -1174,6 +1174,7 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	if id, err := daemon.imageStore.Search(refOrID); err == nil {
 		return id, nil
 	}
+	//Reload repositories.json and populate imageStore
 
 	return "", ErrImageDoesNotExist{refOrID}
 }
