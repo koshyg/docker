@@ -472,15 +472,34 @@ func (p *v2Puller) pullSchema1(ctx context.Context, ref reference.Named, unverif
 	}
 	defer release()
 
+	repoName := p.repoInfo.Name()
+	logrus.Debugf("REPO NAME: %s", repoName)
+
 	config, err := v1.MakeConfigFromV1Config([]byte(verifiedManifest.History[0].V1Compatibility), &resultRootFS, history)
 	if err != nil {
 		return "", "", err
 	}
+	logrus.Debugf("REPO NAME: %s %d %d", repoName, config[0], config[1])
 
 	imageID, err = p.config.ImageStore.Create(config)
 	if err != nil {
 		return "", "", err
 	}
+	//EDIT:START
+	//Write image config to a file so that it can be read during repository reload
+	os.Mkdir("/var/lib/docker/.config", 0777)
+	filePath := fmt.Sprintf("/var/lib/docker/.config/%s", repoName)
+
+	f, err := os.Create(filePath)
+	if err != nil {
+		return "", "", err
+	}
+	n2, err := f.Write(config)
+	if err != nil {
+		return "", "", err
+	}
+	logrus.Debugf("Wrote %d bytes to %s", n2, filePath)
+	//EDIT:END
 
 	manifestDigest = digest.FromBytes(unverifiedManifest.Canonical)
 

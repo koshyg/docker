@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/docker/image"
 )
@@ -283,8 +284,11 @@ func (store *store) reload() error {
 		return err
 	}
 
-	for _, repository := range store.Repositories {
+	for repoName, repository := range store.Repositories {
+		logrus.Debug("REPOSITORY: ", repoName)
 		for refStr, refID := range repository {
+			logrus.Debug("REF_STR: ", refStr)
+			logrus.Debug("REF_ID refID: ", refID)
 			ref, err := ParseNamed(refStr)
 			if err != nil {
 				// Should never happen
