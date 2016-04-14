@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/docker/image"
@@ -71,6 +72,8 @@ func NewReferenceStore(jsonPath string) (Store, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	time.Sleep(time.Second * 20)
 
 	store := &store{
 		jsonPath:            abspath,
