@@ -71,7 +71,6 @@ import (
 	nwconfig "github.com/docker/libnetwork/config"
 	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
-	
 )
 
 const (
@@ -1177,12 +1176,15 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	}
 	//Reload repositories.json and populate imageStore
 	jsonPath := "/var/lib/docker/image/aufs/repositories.json"
+
 	imageId, err := reference.GetNewStore(jsonPath, refOrID)
+	logrus.Debug("ImageID from reference store ", imageId)
 	if err != nil {
-	return "", ErrImageDoesNotExist{refOrID}
-	}else {
-	return imageId, nil
+		return "", ErrImageDoesNotExist{refOrID}
+	} else {
+		return imageId, nil
 	}
+
 	return "", ErrImageDoesNotExist{refOrID}
 }
 
