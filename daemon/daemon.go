@@ -1182,6 +1182,31 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	if err != nil {
 		return "", ErrImageDoesNotExist{refOrID}
 	} else {
+		//Read the Image config contents
+		filePath := fmt.Sprintf("/var/lib/docker/.config/%s", refOrID)
+		f, err := os.Open(filePath)
+		if err != nil {
+			return "", ErrImageDoesNotExist{refOrID}
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return "", ErrImageDoesNotExist{refOrID}
+		}
+		config := make([]byte, fi.Size())
+		length, err := f.Read(config)
+		logrus.Debug("Read", length, "bytes from ", filePath)
+		if err != nil {
+			return "", ErrImageDoesNotExist{refOrID}
+		}
+
+		//Add the config to ImageStore
+		imageID, err := daemon.imageStore.Create(config)
+		logrus.Debug("ImageID: ", imageID)
+		if err != nil {
+			return "", ErrImageDoesNotExist{refOrID}
+		}
+
+		//Return imageId
 		return imageId, nil
 	}
 
