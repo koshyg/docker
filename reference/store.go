@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
-	"time"	
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/digest"
@@ -92,11 +92,12 @@ func NewReferenceStore(jsonPath string) (Store, error) {
 	return store, nil
 }
 
-func GetNewStore(jsonPath string, imageName string) (image.ID,error) {
+//Scan repositories.json and fetch the imageID
+func GetNewStore(jsonPath string, imageName string) (image.ID, Named, error) {
 
-abspath, err := filepath.Abs(jsonPath)
+	abspath, err := filepath.Abs(jsonPath)
 	if err != nil {
-		return "",err
+		return "", nil, err
 	}
 
 	newstore := &store{
@@ -105,28 +106,30 @@ abspath, err := filepath.Abs(jsonPath)
 		referencesByIDCache: make(map[image.ID]map[string]Named),
 	}
 
-f, err := os.Open(newstore.jsonPath)
+	f, err := os.Open(newstore.jsonPath)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	defer f.Close()
 	if err := json.NewDecoder(f).Decode(&newstore); err != nil {
-		return "",err
+		return "", nil, err
 	}
-	
+
 	for repoName, repository := range newstore.Repositories {
 		logrus.Debug("REPOSITORY: ", repoName)
 		if repoName == imageName {
 			for refStr, refID := range repository {
-			logrus.Debug("REF_STR: ", refStr)
-			logrus.Debug("REF_ID refID: ", refID)
-			return refID, nil
+				logrus.Debug("REF_STR: ", refStr)
+				logrus.Debug("REF_ID refID: ", refID)
+				ref, err := ParseNamed(refStr)
+				if err != nil {
+					return "", nil, err
+				}
+				return refID, ref, nil
 			}
 		}
 	}
-
-return "", errors.New("No image found")
-
+	return "", nil, errors.New("No image found")
 }
 
 // AddTag adds a tag reference to the store. If force is set to true, existing
@@ -310,8 +313,6 @@ func (store *store) save() error {
 
 	return nil
 }
-
-
 
 func (store *store) reload() error {
 	f, err := os.Open(store.jsonPath)

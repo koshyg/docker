@@ -1177,7 +1177,7 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	//Reload repositories.json and populate imageStore
 	jsonPath := "/var/lib/docker/image/aufs/repositories.json"
 
-	imageId, err := reference.GetNewStore(jsonPath, refOrID)
+	imageId, ref, err := reference.GetNewStore(jsonPath, refOrID)
 	logrus.Debug("ImageID from reference store ", imageId)
 	if err != nil {
 		return "", ErrImageDoesNotExist{refOrID}
@@ -1201,8 +1201,17 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 
 		//Add the config to ImageStore
 		imageID, err := daemon.imageStore.Create(config)
-		logrus.Debug("ImageID: ", imageID)
+		logrus.Debug("ImageID: ", imageID) //refID and imageID are same
 		if err != nil {
+			return "", ErrImageDoesNotExist{refOrID}
+		}
+
+		//add image info to reference Store; imageID is same as refID
+		if canonical, ok := ref.(reference.Canonical); ok {
+			if err = daemon.referenceStore.AddDigest(canonical, imageID, true); err != nil {
+				return "", ErrImageDoesNotExist{refOrID}
+			}
+		} else if err = daemon.referenceStore.AddTag(ref, imageID, true); err != nil {
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 
