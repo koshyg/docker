@@ -1180,26 +1180,26 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	imageId, ref, err := reference.GetNewStore(jsonPath, refOrID)
 	logrus.Debug("ImageID from reference store ", imageId)
 	if err != nil {
-		logrus.Debug("Error from GetNewStore : Image doesn't exist")
+		logrus.Debug("Error from GetNewStore : Image doesn't exist :", err)
 		return "", ErrImageDoesNotExist{refOrID}
 	} else {
 		//Read the Image config contents
 		filePath := fmt.Sprintf("/var/lib/docker/aufs/.config/%s", refOrID)
 		f, err := os.Open(filePath)
 		if err != nil {
-			logrus.Debug("File Config Open Error")
+			logrus.Debug("File Config Open Error :", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 		fi, err := f.Stat()
 		if err != nil {
-			logrus.Debug("File Stat error")
+			logrus.Debug("File Stat error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 		config := make([]byte, fi.Size())
 		length, err := f.Read(config)
 		logrus.Debug("Read", length, "bytes from ", filePath)
 		if err != nil {
-			logrus.Debug("File Read error")
+			logrus.Debug("File Read error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 
@@ -1207,7 +1207,7 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		imageID, err := daemon.imageStore.Create(config)
 		logrus.Debug("ImageID: ", imageID) //refID and imageID are same
 		if err != nil {
-			logrus.Debug("ImageStore create error")
+			logrus.Debug("ImageStore create error:", err)
 			logrus.Debug("ImageID: ", imageID) //refID and imageID are same
 			return "", ErrImageDoesNotExist{refOrID}
 		}
@@ -1215,11 +1215,11 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		//add image info to reference Store; imageID is same as refID
 		if canonical, ok := ref.(reference.Canonical); ok {
 			if err = daemon.referenceStore.AddDigest(canonical, imageID, true); err != nil {
-				logrus.Debug("Add Digest error")
+				logrus.Debug("Add Digest error: ", err)
 				return "", ErrImageDoesNotExist{refOrID}
 			}
 		} else if err = daemon.referenceStore.AddTag(ref, imageID, true); err != nil {
-			logrus.Debug("Add Tag error")
+			logrus.Debug("Add Tag error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 
