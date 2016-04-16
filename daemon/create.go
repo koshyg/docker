@@ -59,17 +59,21 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 
 	if params.Config.Image != "" {
 		img, err = daemon.GetImage(params.Config.Image)
+		logrus.Debug("Image for container Create %s : ", params.Config.Image)
 		if err != nil {
+			logrus.Debug("daemon.GetImage error")
 			return nil, err
 		}
 		imgID = img.ID()
 	}
 
 	if err := daemon.mergeAndVerifyConfig(params.Config, img); err != nil {
+		logrus.Debug("daemon.mergeAndVerifyConfig error")
 		return nil, err
 	}
 
 	if container, err = daemon.newContainer(params.Name, params.Config, imgID); err != nil {
+		logrus.Debug("daemon.newContainer error")
 		return nil, err
 	}
 	defer func() {
@@ -81,6 +85,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 	}()
 
 	if err := daemon.setSecurityOptions(container, params.HostConfig); err != nil {
+		logrus.Debug("daemon.setSecurityOptions error")
 		return nil, err
 	}
 
@@ -88,29 +93,35 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 
 	// Set RWLayer for container after mount labels have been set
 	if err := daemon.setRWLayer(container); err != nil {
+		logrus.Debug("daemon.setRWLayer error")
 		return nil, err
 	}
 
 	rootUID, rootGID, err := idtools.GetRootUIDGID(daemon.uidMaps, daemon.gidMaps)
 	if err != nil {
+		logrus.Debug("daemon.GetRootUIDGID error")
 		return nil, err
 	}
 	if err := idtools.MkdirAs(container.Root, 0700, rootUID, rootGID); err != nil {
+		logrus.Debug("daemon.MkdirAs error")
 		return nil, err
 	}
 
 	if err := daemon.setHostConfig(container, params.HostConfig); err != nil {
+		logrus.Debug("daemon.setHostConfig error")
 		return nil, err
 	}
 	defer func() {
 		if retErr != nil {
 			if err := daemon.removeMountPoints(container, true); err != nil {
+				logrus.Debug("daemon.removeMountPoints error")
 				logrus.Error(err)
 			}
 		}
 	}()
 
 	if err := daemon.createContainerPlatformSpecificSettings(container, params.Config, params.HostConfig); err != nil {
+		logrus.Debug("daemon.createContainerPlatformSpecificSettings error")
 		return nil, err
 	}
 
@@ -120,6 +131,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 	}
 
 	if err := daemon.updateContainerNetworkSettings(container, endpointsConfigs); err != nil {
+		logrus.Debug("daemon.updateContainerNetworkSettings error")
 		return nil, err
 	}
 
@@ -128,6 +140,7 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 		return nil, err
 	}
 	if err := daemon.Register(container); err != nil {
+		logrus.Debug("daemon.Register error")
 		return nil, err
 	}
 	daemon.LogContainerEvent(container, "create")

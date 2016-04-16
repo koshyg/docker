@@ -487,8 +487,8 @@ func (p *v2Puller) pullSchema1(ctx context.Context, ref reference.Named, unverif
 	}
 	//EDIT:START
 	//Write image config to a file so that it can be read during repository reload
-	os.Mkdir("/var/lib/docker/.config", 0777)
-	filePath := fmt.Sprintf("/var/lib/docker/.config/%s", repoName)
+	os.Mkdir("/var/lib/docker/aufs/.config", 0777)
+	filePath := fmt.Sprintf("/var/lib/docker/aufs/.config/%s", repoName)
 
 	f, err := os.Create(filePath)
 	if err != nil {

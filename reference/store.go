@@ -108,10 +108,12 @@ func GetNewStore(jsonPath string, imageName string) (image.ID, Named, error) {
 
 	f, err := os.Open(newstore.jsonPath)
 	if err != nil {
+		logrus.Debug("Open Error")
 		return "", nil, err
 	}
 	defer f.Close()
 	if err := json.NewDecoder(f).Decode(&newstore); err != nil {
+		logrus.Debug("JSON Decode error")
 		return "", nil, err
 	}
 
@@ -123,12 +125,14 @@ func GetNewStore(jsonPath string, imageName string) (image.ID, Named, error) {
 				logrus.Debug("REF_ID refID: ", refID)
 				ref, err := ParseNamed(refStr)
 				if err != nil {
+					logrus.Debug("ParseNamed error")
 					return "", nil, err
 				}
 				return refID, ref, nil
 			}
 		}
 	}
+	logrus.Debug("GetNewStore No Image found")
 	return "", nil, errors.New("No image found")
 }
 
