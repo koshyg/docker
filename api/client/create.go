@@ -110,6 +110,10 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 	response, err := cli.client.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, name)
 
 	//if image not found try to pull it
+	//Check if global lock file exists for the same image name
+	//in .downloads directory.
+	//If the file exists, wait until file gets deleted. Repeat the same operation
+	//If the file does not exist, create the file and proceed to download
 	if err != nil {
 		if client.IsErrImageNotFound(err) && ref != nil {
 			fmt.Fprintf(cli.err, "Unable to find image '%s' locally\n", ref.String())
