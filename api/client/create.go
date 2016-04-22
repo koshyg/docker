@@ -121,8 +121,15 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 
 			os.Mkdir("/var/lib/docker/aufs/.download", 0777)
 			filePath := fmt.Sprintf("/var/lib/docker/aufs/.download/%s", ref.String())
-			for Fileexists(filePath) {
+			if !Fileexists(filePath) {
+				_, err := os.Create(filePath)
+				if err != nil {
+					return nil,err
+				}	
+			} else {
+				for Fileexists(filePath) {
 			    
+				}
 			}
 			
 			// we don't want to write to stdout anything apart from container.ID
