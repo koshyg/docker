@@ -126,11 +126,7 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 				if err != nil {
 					return nil,err
 				}	
-			} else {
-				for Fileexists(filePath) {
-			    
-				}
-			}
+			
 			
 			// we don't want to write to stdout anything apart from container.ID
 			if err = cli.pullImage(config.Image, cli.err); err != nil {
@@ -147,6 +143,49 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 			if retryErr != nil {
 				return nil, retryErr
 			}
+
+			
+		    }else {
+                                for Fileexists(filePath) {
+
+                                }
+			
+			response, err = cli.client.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, name)
+			if err != nil {
+		if client.IsErrImageNotFound(err) && ref != nil {
+			fmt.Fprintf(cli.err, "Unable to find image '%s' locally\n", ref.String())
+
+			// we don't want to write to stdout anything apart from container.ID
+			if err = cli.pullImage(config.Image, cli.err); err != nil {
+				return nil, err
+			}
+			if ref, ok := ref.(reference.NamedTagged); ok && trustedRef != nil {
+				if err := cli.tagTrusted(trustedRef, ref); err != nil {
+					return nil, err
+				}
+			}
+			// Retry
+			var retryErr error
+			response, retryErr = cli.client.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, name)
+			if retryErr != nil {
+				return nil, retryErr
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	for _, warning := range response.Warnings {
+		fmt.Fprintf(cli.err, "WARNING: %s\n", warning)
+	}
+	if containerIDFile != nil {
+		if err = containerIDFile.Write(response.ID); err != nil {
+			return nil, err
+		}
+	}
+	return &response, nil
+                        }
+
 		} else {
 			return nil, err
 		}
