@@ -2,7 +2,6 @@ package distribution
 
 import (
 	"fmt"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api"
 	"github.com/docker/docker/distribution/metadata"
@@ -13,6 +12,8 @@ import (
 	"github.com/docker/docker/registry"
 	"github.com/docker/engine-api/types"
 	"golang.org/x/net/context"
+	"os"
+	"strings"
 )
 
 // ImagePullConfig stores pull configuration.
@@ -188,6 +189,14 @@ func Pull(ctx context.Context, ref reference.Named, imagePullConfig *ImagePullCo
 func writeStatus(requestedTag string, out progress.Output, layersDownloaded bool) {
 	if layersDownloaded {
 		progress.Message(out, "", "Status: Downloaded newer image for "+requestedTag)
+		//Release the global lock by deleting the image
+		imageName := strings.Split(requestedTag, ":")
+		logrus.Debug("Image file to be deleted is :", imageName[0])
+		filePath := fmt.Sprintf("/var/lib/docker/aufs/.downloads/%s", imageName[0])
+		err := os.Remove(filePath)
+		if err != nil {
+			logrus.Debug("File delete error")
+		}
 	} else {
 		progress.Message(out, "", "Status: Image is up to date for "+requestedTag)
 	}

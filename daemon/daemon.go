@@ -1143,6 +1143,21 @@ func (daemon *Daemon) ImageHistory(name string) ([]*types.ImageHistory, error) {
 	return history, nil
 }
 
+//Check if an active download for an image is going on
+
+func FileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+	return false
+}
+
 // GetImageID returns an image ID corresponding to the image referred to by
 // refOrID.
 func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
@@ -1174,13 +1189,32 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 	if id, err := daemon.imageStore.Search(refOrID); err == nil {
 		return id, nil
 	}
+
+	//Check if any active downloads for the same image is going on
+	filePath := fmt.Sprintf("/var/lib/docker/aufs/.downloads/%s", refOrID)
+
+	for FileExists(filePath) {
+		//Wait until download finishes
+	}
+	time.Sleep(10 * time.Second)
+
 	//Reload repositories.json and populate imageStore
 	jsonPath := "/var/lib/docker/image/aufs/repositories.json"
 
 	imageId, ref, err := reference.GetNewStore(jsonPath, refOrID)
 	logrus.Debug("ImageID from reference store ", imageId)
 	if err != nil {
-		logrus.Debug("Error from GetNewStore : Image doesn't exist :%v", err)
+		logrus.Debug("Error from GetNewStore : Image doesn't exist: ", err)
+
+		//Place a global lock before download by creating a file
+		//in the .downloads directory
+		os.Mkdir("/var/lib/docker/aufs/.downloads", 0777)
+		logrus.Debug("Creating file : ", filePath)
+		_, err = os.Create(filePath)
+		if err != nil {
+			logrus.Debug("File create error: ", filePath)
+			return "", ErrImageDoesNotExist{refOrID}
+		}
 		return "", ErrImageDoesNotExist{refOrID}
 	} else {
 		//Read the Image config contents
@@ -1227,6 +1261,16 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		return imageId, nil
 	}
 	logrus.Debug("Image Doesn't exist from GetImageID")
+
+	//Place a global lock before download by creating a file
+	//in the .downloads directory
+	os.Mkdir("/var/lib/docker/aufs/.downloads", 0777)
+	logrus.Debug("Creating file : ", filePath)
+	_, err = os.Create(filePath)
+	if err != nil {
+		return "", ErrImageDoesNotExist{refOrID}
+	}
+
 	return "", ErrImageDoesNotExist{refOrID}
 }
 
