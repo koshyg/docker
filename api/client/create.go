@@ -110,14 +110,21 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 	response, err := cli.client.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, name)
 
 	//if image not found try to pull it
-	//Check if global lock file exists for the same image name
-	//in .downloads directory.
-	//If the file exists, wait until file gets deleted. Repeat the same operation
-	//If the file does not exist, create the file and proceed to download
 	if err != nil {
 		if client.IsErrImageNotFound(err) && ref != nil {
 			fmt.Fprintf(cli.err, "Unable to find image '%s' locally\n", ref.String())
 
+	//Check if global lock file exists for the same image name
+        //in .downloads directory.
+        //If the file exists, wait until file gets deleted. Repeat the same ope$
+        //If the file does not exist, create the file and proceed to download
+
+			os.Mkdir("/var/lib/docker/aufs/.download", 0777)
+			filePath := fmt.Sprintf("/var/lib/docker/aufs/.download/%s", ref.String())
+			for Fileexists(filePath) {
+			    
+			}
+			
 			// we don't want to write to stdout anything apart from container.ID
 			if err = cli.pullImage(config.Image, cli.err); err != nil {
 				return nil, err
@@ -147,6 +154,23 @@ func (cli *DockerCli) createContainer(config *container.Config, hostConfig *cont
 		}
 	}
 	return &response, nil
+}
+
+//Check if file exists in the path
+
+func Fileexists(filepath string) (bool) {
+//os.Stat checks for the file
+  _,err := os.Stat(filepath)
+  
+  if os.IsNotExist(err) {
+    return false
+  }
+  if err!=nil {
+    return false
+  }else {
+    return true
+  }
+  return false
 }
 
 // CmdCreate creates a new container from a given image.
