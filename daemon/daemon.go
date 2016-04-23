@@ -1190,50 +1190,48 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		return id, nil
 	}
 
-	//Check if any active downloads for the same image is going on
 	filePath := fmt.Sprintf("/var/lib/docker/aufs/.downloads/%s", refOrID)
-
-	for FileExists(filePath) {
-		//Wait until download finishes
+	if FileExists(filePath) {
+		logrus.Debug("Parallel Download Going on.. Hang on!!!!")
+		for FileExists(filePath) {
+			//Wait until download finishes
+			//time.Sleep(20 * time.Second)
+		}
 	}
-	time.Sleep(10 * time.Second)
 
 	//Reload repositories.json and populate imageStore
+	logrus.Debug("Reload repositories.json to see if image already exists")
 	jsonPath := "/var/lib/docker/image/aufs/repositories.json"
-
 	imageId, ref, err := reference.GetNewStore(jsonPath, refOrID)
-	logrus.Debug("ImageID from reference store ", imageId)
 	if err != nil {
-		logrus.Debug("Error from GetNewStore : Image doesn't exist: ", err)
-
-		//Place a global lock before download by creating a file
-		//in the .downloads directory
+		logrus.Debug("Error from GetNewStore : ", err)
+		//Image doesn't exist in repositories.json too. Place global lock before downloading
 		os.Mkdir("/var/lib/docker/aufs/.downloads", 0777)
-		logrus.Debug("Creating file : ", filePath)
-		_, err = os.Create(filePath)
+		logrus.Debug("Placing lock by creating file in directory .downloads : ", filePath)
+		_, err := os.Create(filePath)
 		if err != nil {
-			logrus.Debug("File create error: ", filePath)
-			return "", ErrImageDoesNotExist{refOrID}
+			logrus.Debug("File create in .downloads error :", filePath)
 		}
 		return "", ErrImageDoesNotExist{refOrID}
 	} else {
 		//Read the Image config contents
+		logrus.Debug("ImageID from reference store ", imageId)
 		filePath := fmt.Sprintf("/var/lib/docker/aufs/.config/%s", refOrID)
 		f, err := os.Open(filePath)
 		if err != nil {
-			logrus.Debug("File Config Open Error :%v", err)
+			logrus.Debug("File Config Open Error : ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 		fi, err := f.Stat()
 		if err != nil {
-			logrus.Debug("File Stat error: %v", err)
+			logrus.Debug("File Stat error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 		config := make([]byte, fi.Size())
 		length, err := f.Read(config)
-		logrus.Debug("Read", length, "bytes from ", filePath)
+		logrus.Debug("Read ", length, " bytes from ", filePath)
 		if err != nil {
-			logrus.Debug("File Read error: %v", err)
+			logrus.Debug("File Read error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 
@@ -1241,7 +1239,7 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		imageID, err := daemon.imageStore.Create(config)
 		logrus.Debug("ImageID: ", imageID) //refID and imageID are same
 		if err != nil {
-			logrus.Debug("ImageStore create error :%v", err)
+			logrus.Debug("ImageStore create error : ", err)
 			logrus.Debug("ImageID: ", imageID) //refID and imageID are same
 			return "", ErrImageDoesNotExist{refOrID}
 		}
@@ -1249,23 +1247,23 @@ func (daemon *Daemon) GetImageID(refOrID string) (image.ID, error) {
 		//add image info to reference Store; imageID is same as refID
 		if canonical, ok := ref.(reference.Canonical); ok {
 			if err = daemon.referenceStore.AddDigest(canonical, imageID, true); err != nil {
-				logrus.Debug("Add Digest error: %v", err)
+				logrus.Debug("Add Digest error: ", err)
 				return "", ErrImageDoesNotExist{refOrID}
 			}
 		} else if err = daemon.referenceStore.AddTag(ref, imageID, true); err != nil {
-			logrus.Debug("Add Tag error: %v", err)
+			logrus.Debug("Add Tag error: ", err)
 			return "", ErrImageDoesNotExist{refOrID}
 		}
 
 		//Return imageId
 		return imageId, nil
 	}
-	logrus.Debug("Image Doesn't exist from GetImageID")
+	logrus.Debug("Image Doesn't exist in ImageStore")
 
 	//Place a global lock before download by creating a file
 	//in the .downloads directory
 	os.Mkdir("/var/lib/docker/aufs/.downloads", 0777)
-	logrus.Debug("Creating file : ", filePath)
+	logrus.Debug("Setting global lock for : ", filePath)
 	_, err = os.Create(filePath)
 	if err != nil {
 		return "", ErrImageDoesNotExist{refOrID}

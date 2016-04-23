@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/docker/api/server/httputils"
 	"github.com/docker/docker/api/types/backend"
@@ -224,6 +225,7 @@ func (s *imageRouter) deleteImages(ctx context.Context, w http.ResponseWriter, r
 	force := httputils.BoolValue(r, "force")
 	prune := !httputils.BoolValue(r, "noprune")
 
+	logrus.Debug("Image to be deleted: ", name)
 	list, err := s.backend.ImageDelete(name, force, prune)
 	if err != nil {
 		return err

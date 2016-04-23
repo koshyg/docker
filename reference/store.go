@@ -109,12 +109,12 @@ func GetNewStore(jsonPath string, imageName string) (image.ID, Named, error) {
 	f, err := os.Open(newstore.jsonPath)
 	if err != nil {
 		logrus.Debug("Open Error")
-		return "", nil, err
+		return "", nil, errors.New("Json path open failed")
 	}
 	defer f.Close()
 	if err := json.NewDecoder(f).Decode(&newstore); err != nil {
 		logrus.Debug("JSON Decode error")
-		return "", nil, err
+		return "", nil, errors.New("Json decode failed")
 	}
 
 	for repoName, repository := range newstore.Repositories {

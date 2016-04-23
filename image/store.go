@@ -129,6 +129,7 @@ func (is *store) Create(config []byte) (ID, error) {
 
 	dgst, err := is.fs.Set(config)
 	if err != nil {
+		logrus.Debug("Error from fs.Set(config): ", err)
 		return "", err
 	}
 	imageID := ID(dgst)
@@ -137,6 +138,7 @@ func (is *store) Create(config []byte) (ID, error) {
 	defer is.Unlock()
 
 	if _, exists := is.images[imageID]; exists {
+		logrus.Debug("Image exist in store: ", imageID)
 		return imageID, nil
 	}
 
@@ -146,6 +148,7 @@ func (is *store) Create(config []byte) (ID, error) {
 	if layerID != "" {
 		l, err = is.ls.Get(layerID)
 		if err != nil {
+			logrus.Debug("Error from ls.Get(layerID): layerID:", layerID, " err: ", err)
 			return "", err
 		}
 	}
@@ -157,10 +160,11 @@ func (is *store) Create(config []byte) (ID, error) {
 
 	is.images[imageID] = imageMeta
 	if err := is.digestSet.Add(digest.Digest(imageID)); err != nil {
+		logrus.Debug("Error from digestSet.Add(imageID): imageID:", imageID, " err: ", err)
 		delete(is.images, imageID)
 		return "", err
 	}
-
+	logrus.Debug("Image exist :", imageID)
 	return imageID, nil
 }
 

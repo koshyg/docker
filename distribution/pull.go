@@ -191,7 +191,7 @@ func writeStatus(requestedTag string, out progress.Output, layersDownloaded bool
 		progress.Message(out, "", "Status: Downloaded newer image for "+requestedTag)
 		//Release the global lock by deleting the image
 		imageName := strings.Split(requestedTag, ":")
-		logrus.Debug("Image file to be deleted is :", imageName[0])
+		logrus.Debug("Deleting lock Image file :", imageName[0])
 		filePath := fmt.Sprintf("/var/lib/docker/aufs/.downloads/%s", imageName[0])
 		err := os.Remove(filePath)
 		if err != nil {
